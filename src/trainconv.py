@@ -4,6 +4,7 @@ from sconv import SConv
 from dataset import spiking_dataset
 
 plt.style.use('dark_background')
+FACECOLOR = "#181135"
 
 TRAINING_ITERATIONS = 2500
 WEIGHTS_FILE = "weightsfile"
@@ -30,6 +31,7 @@ def train_one_image(spiking_image):
     conv_layer.reset_state()
 
 fig, axs = plt.subplots(3,10)
+fig.set_facecolor(FACECOLOR)
 
 # save a copy of all kernels before training
 kernels_at_start = []
