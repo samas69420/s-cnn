@@ -35,14 +35,17 @@ after the train you can also use other scripts to have more informations about w
 
 after 2500 iterations of the training loop it is clear that the most frequent features have been learned (basically vertical, horizontal and diagonal edges), however some features still need to be defined and further training iterations are required to make kernels converge
 
-C1 kernels - i=0
+## C1 kernels - i=0
+
 ![](images/on0.png?raw=true)
 ![](images/off0.png?raw=true)
 
-C1 kernels - i=2500
+## C1 kernels - i=2500
+
 ![](images/on2500.png?raw=true)
 ![](images/off2500.png?raw=true)
 
-C1 kernels - i=5000
+## C1 kernels - i=5000
+
 ![](images/on5000.png?raw=true)
 ![](images/off5000.png?raw=true)
