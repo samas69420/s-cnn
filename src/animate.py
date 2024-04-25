@@ -2,18 +2,19 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib import animation
 import numpy
-from sconv import SConv
-from spool import SPool
+from layers.sconv import SConv
+from layers.spool import SPool
 from dataset import spiking_dataset
 
 timesteps = spiking_dataset.timesteps
+WEIGHTS_FILE = "weightsfile"
 
 conv_layer = SConv(spiking_dataset.data_shape[1:],
                    num_kernels = 30,
                    kernel_shape = (2,5,5),
                    threshold = 15)
 
-conv_layer.load_weights_numpy("weightsfile")
+conv_layer.load_weights_numpy(WEIGHTS_FILE )
 
 pool_layer = SPool((conv_layer.output_shape[0],
                     conv_layer.output_shape[1]-1,

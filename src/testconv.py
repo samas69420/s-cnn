@@ -1,6 +1,6 @@
 import numpy
 import matplotlib.pyplot as plt
-from sconv import SConv
+from layers.sconv import SConv
 from dataset import spiking_dataset
 
 WEIGHTS_FILE = "weightsfile"

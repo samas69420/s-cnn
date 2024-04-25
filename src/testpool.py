@@ -1,8 +1,8 @@
 import numpy
 import matplotlib.pyplot as plt
-from sconv import SConv
-from spool import SPool
 from dataset import spiking_dataset
+from layers.sconv import SConv
+from layers.spool import SPool
 
 WEIGHTS_FILE = "weightsfile"
 TEST_MAP = 0
@@ -25,7 +25,7 @@ pool_layer = SPool((conv_layer.output_shape[0],
                     conv_layer.output_shape[2]-1),2)
 
 fig, axs = plt.subplots(2,timesteps//2)
-fig.suptitle("image ON")
+fig.suptitle("conv out ON")
 fig.set_facecolor(FACECOLOR)
 
 fig2, axs2 = plt.subplots(2,timesteps//2)
