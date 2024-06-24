@@ -1,2 +1,10 @@
 __pycache__/
+*.vim
 weightsfile
+oldlayer*
+*.backup
+network2.py
+prova
+profile.txt
+animation.gif
+*.so

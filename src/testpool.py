@@ -9,6 +9,8 @@ TEST_MAP = 0
 
 FACECOLOR = "#181135"
 
+cut_first_row_and_col = True
+
 spiking_image = spiking_dataset[0][0] # shape = (10, 2, 27, 27)
 
 timesteps = spiking_dataset.timesteps
@@ -20,9 +22,12 @@ conv_layer = SConv(spiking_image.shape[1:],
 
 conv_layer.load_weights_numpy(WEIGHTS_FILE)
 
-pool_layer = SPool((conv_layer.output_shape[0],
-                    conv_layer.output_shape[1]-1,
-                    conv_layer.output_shape[2]-1),2)
+if cut_first_row_and_col:
+    pool_layer = SPool((conv_layer.output_shape[0],
+                        conv_layer.output_shape[1]-1,
+                        conv_layer.output_shape[2]-1),2)
+else:
+    pool_layer = SPool(conv_layer.output_shape,2)
 
 fig, axs = plt.subplots(2,timesteps//2)
 fig.suptitle("conv out ON")
@@ -35,7 +40,7 @@ fig2.set_facecolor(FACECOLOR)
 for t in range(timesteps):
     spiking_frame = spiking_image[t]
     out_conv_t = conv_layer(spiking_frame)
-    out_pool_t = pool_layer(out_conv_t[:,1:,1:])
+    out_pool_t = pool_layer(out_conv_t[:,1:,1:]) if cut_first_row_and_col else pool_layer(out_conv_t)
     axs[t//(timesteps//2),t%(timesteps//2)].imshow(out_conv_t[TEST_MAP]) 
     axs2[t//(timesteps//2),t%(timesteps//2)].imshow(out_pool_t[TEST_MAP])
 

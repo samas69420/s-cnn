@@ -1,6 +1,6 @@
 import numpy
 
-def conv3d(array, kernel): 
+def slow_conv2d(array, kernel): 
 # perform valid mode convolution on a 3darray with a 3dkernel 
 # assuming stride 1 
 
@@ -13,6 +13,13 @@ def conv3d(array, kernel):
             result[i][j] = numpy.sum( sliding_window * kernel )
 
     return result
+
+try:
+    from fastconv import conv2d
+except ModuleNotFoundError:
+    print("can't find fastconv module, did you compile fastconv.c?")
+    input("press enter to proceed with super slow python-only convolution implementation")
+    conv2d = slow_conv2d
 
 # 1-line utils
 argmaxNd = lambda arrNd : numpy.unravel_index(arrNd.argmax(),arrNd.shape)
@@ -29,22 +36,17 @@ class SConv:
         assert(len(input_shape) == 3)
         assert(input_shape[0] == kernel_shape[0])
 
-        self.input_shape = input_shape
-        self.num_kernels = num_kernels 
-        self.kernel_shape = kernel_shape
-        self.threshold = threshold
-        self.training = training
-        self.a_minus = a_minus
-        self.a_plus = a_plus
-        self.stdp_competition_window_size = stdp_competition_window_size
+        # automatically initialize members to arguments (self.layers = layers...)
+        self.__dict__.update(locals()) 
+
+        self.trainable = True
 
         # set conv layer output shape according to valid convolution mode 
         self.output_shape = (self.num_kernels,                                     \
                              self.input_shape[-2:][0]-self.kernel_shape[-2:][0]+1, \
                              self.input_shape[-2:][1]-self.kernel_shape[-2:][1]+1) # 30,23,23
 
-        mode = "training" if training else "inference"
-        print(f"creating SConv layer in {mode} mode - out shape: {self.output_shape}")
+        print(f"creating SConv layer - out shape: {self.output_shape}")
 
         # kernels initialization
         print("initializing random kernels")
@@ -52,14 +54,30 @@ class SConv:
         for _ in range(self.num_kernels):
             self.kernels.append(numpy.random.normal(loc = wloc, scale = wscale, size = self.kernel_shape)) # gaussian init
 
-        self.potentials = numpy.zeros(self.output_shape)
+        self.num_w_total = numpy.prod(self.kernel_shape) * self.num_kernels
 
+        self.potentials = numpy.zeros(self.output_shape)
         self.lat_inhib_mask  = numpy.ones(self.output_shape)
-        self.stdp_comp1_mask = numpy.ones(self.output_shape)
-        self.stdp_comp2_mask = numpy.ones(self.output_shape)
+
+        if training:
+            self.set_training()
+
+    def set_training(self):
+        print("SConv setting training mode")
+        self.training = True
 
         # logged_spikes(t) = all input spikes emitted up to timestep "t"
         self.logged_input_spikes = numpy.zeros(self.input_shape)
+
+        self.stdp_comp1_mask = numpy.ones(self.output_shape)
+        self.stdp_comp2_mask = numpy.ones(self.output_shape)
+
+    def get_avg_w_convergence(self):
+        avg_convergence = 0
+        for kernel in self.kernels:
+            avg_convergence += numpy.sum((kernel * (1-kernel)))
+        avg_convergence = avg_convergence / self.num_w_total 
+        return avg_convergence
 
     def load_weights_numpy(self, weights_file_path):
         print(f"loading weights from {weights_file_path}")
@@ -67,7 +85,7 @@ class SConv:
             with open(weights_file_path, "rb") as f:
                 for i in range(self.num_kernels):
                    self.kernels[i] = numpy.load(f)
-            print(f"loading success")
+            print(f"loading done")
         except FileNotFoundError:
             print(f"can't find weights file \'{weights_file_path}\', continuing with random weights")
 
@@ -90,10 +108,11 @@ class SConv:
         self.logged_input_spikes = numpy.zeros(self.logged_input_spikes.shape)
 
     def reset_state(self):
+        if self.training:
+            self.reset_stdp_comp1_mask()
+            self.reset_stdp_comp2_mask()
+            self.reset_logged_spikes()
         self.reset_lat_inhib_mask()
-        self.reset_stdp_comp1_mask()
-        self.reset_stdp_comp2_mask()
-        self.reset_logged_spikes()
         self.potentials = numpy.zeros(self.output_shape)
 
     def lateral_inhibition(self):
@@ -209,8 +228,9 @@ class SConv:
             
     def forward(self, spiking_frame):
 
-        self.logged_input_spikes += spiking_frame
-        assert(self.logged_input_spikes.max() <= 1)
+        if self.training:
+            self.logged_input_spikes += spiking_frame
+            assert(self.logged_input_spikes.max() <= 1)
 
         # reset neurons that have spiked in previous timestep
         # without this operation next time that lateral inhibition is invoked
@@ -221,7 +241,7 @@ class SConv:
         self.potentials *= numpy.logical_not(self.calc_spikes())
 
         for k,kernel in enumerate(self.kernels): 
-            self.potentials[k] += conv3d(spiking_frame, kernel)
+            self.potentials[k] += conv2d(spiking_frame, kernel)
 
         self.lateral_inhibition()
         if self.training:
